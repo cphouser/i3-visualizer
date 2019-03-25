@@ -23,7 +23,12 @@ HALF_BLOCK = 9616
 FULL_BLOCK = 9608
 WIN_COLOR_KEY = {0:4, 1:1, 2:7, 3:6, 4:0, 5:5, 6:4 }#val: cL index
 CON_COLOR_KEY = {0:0, 1:5, 2:4, 3:1, 4:7, 5:6, 6:0 }#key: depth
-MOVE_COMMANDS = {"w":"up","a":"left","s":"down","d":"right"}#for i3 comm
+MOVE_COMMANDS = {
+    "w":"up",
+    "a":"left",
+    "s":"down",
+    "d":"right"
+}#for i3 comm
 
 
 class Window:
@@ -369,10 +374,6 @@ def initWorksPrint(p_y,p_x):
     wList.append(max(heights))
     return wList
 
-def onMove(self,event):
-    win.addstr(0,1,"|".join(str(i) for i in event),cL[2])
-    workspaces = initWorksPrint(1,1)
-
 def main():
     cL = colorInit()
     workspaces = initWorksPrint(1,1)
@@ -392,6 +393,7 @@ def main():
             command_return = selection.move(chr(key))
             print_ret = "|".join(str(x) for x in command_return)
             win.addstr(p_y + 2,1,print_ret,cL[1])
+            workspaces = initWorksPrint(1,1)
         key = win.getch()
 
     curses.nocbreak()
@@ -411,9 +413,9 @@ if windowHeight < 20 or windowWidth < 70:
     curses.echo()
     curses.endwin()
 else:
-    i3.on("window::move", onMove)#event subscription for a moved window
     main()
 
+#wrap up
 focused = tree.find_focused()
 curses.nocbreak()
 win.keypad(False)
