@@ -90,7 +90,7 @@ class Selection:
         self.selected = self.workspaces[self.workspace]
         self.workspaces[self.workspace].selectW()
 
-    def print(self,p_y,width):
+    def printInfo(self,p_y,width):
         lines = [   ("Selected Window:",cL[13]), (self.selected.name,cL[9]),
                     ("-Layout: ",cL[10]), (self.selected.layout,cL[9]),
                     ("-Class: ",cL[10]), (self.selected.window_class,cL[9]),
@@ -111,6 +111,14 @@ class Selection:
             win.addstr(p_y,1,*(lines[i]))
             win.addstr(*(lines[i+1]))
 
+    def printActions(self,p_y,width):
+        lines = [   ("Selected Window:",cL[13]), (self.selected.name,cL[9]),
+                    ("-Layout: ",cL[10]), (self.selected.layout,cL[9]),
+                    ("-Class: ",cL[10]), (self.selected.window_class,cL[9]),
+                    ("-Instance: ",cL[10]), (self.selected.instance,cL[9]),
+                    ("-ID: ",cL[10]), (str(self.selected.id),cL[9]),
+                    ("-Children: ",cL[10]), (str(len(self.selected.children)),cL[9])
+                ]
 
     def shift(self,key):
         window = self.selected
@@ -158,7 +166,6 @@ class Selection:
         win.addstr(windowHeight-2,0,cmd_string,self.selected.color())
         i3reply = i3.command(cmd_string)
         return i3reply
-        return "0"
 
 class WindowContainer(Window):
     def __init__(self,tainer,depth,parent):
@@ -254,6 +261,7 @@ def colorInit():
             win.addstr("olor#"+str(i),item)
     return cL 
 
+#return a string rendering of name with length dim_x characters
 def shortName(name,dim_x):
     if name is None:
         return "*".ljust(dim_x)
@@ -271,7 +279,12 @@ def shortName(name,dim_x):
         else:
             return name[0:dim_x]
 
-#returns height of workspace layout diagram appended to list of workspaces
+#clear line p_y
+def clearLine(p_y):
+    win.move(p_y,0)
+    win.clrtoeol()
+
+#return height of workspace layout diagram appended to list of workspaces
 def initWorksPrint(p_y,p_x):
     #get the tree from i3, add each workspace to wList
     tree = i3.get_tree()
@@ -298,27 +311,36 @@ def initWorksPrint(p_y,p_x):
     wList.append(max(heights))
     return wList
 
-def main():
-    cL = colorInit()
+def masterInit():
+    win.move(0,0)
+    win.clrtobot()
     workspaces = initWorksPrint(1,1)
     p_y = workspaces.pop()
     p_x = 1
-    selection = Selection(workspaces)
-    win.addstr(p_y + 2,0,shortName(" ",windowWidth),cL[1])
-    selection.print(p_y + 3,windowWidth//2)
-    #printWorks()
-    key = win.getch()
-    while chr(key) != 'q':
+    selection = Selection(workspaces)#select first workspace
+    win.addstr(p_y + 2,0,shortName(" ",windowWidth),cL[1])#line below diagram
+    selection.printInfo(p_y + 3,windowWidth//2)#print i3 window data as list
+    selection.printActions(p_y + 3,windowWidth//2)
+    return selection,p_y,p_x
+
+def main():
+    cL = colorInit()
+    selection,p_y,p_x = masterInit()
+    while True: #input loop
+        key = win.getch()
+        if chr(key) == 'q':
+            win.addstr(p_y + 2,1,"-12-",cL[9])
+            break
         if (key == curses.KEY_UP or key == curses.KEY_DOWN
                 or key == curses.KEY_LEFT or key == curses.KEY_RIGHT):
             selection.shift(key)
-            selection.print(p_y + 3,windowWidth//2)
+            selection.printInfo(p_y + 3,windowWidth//2)
+            continue
         elif (chr(key) in "wasd"):
             command_return = selection.move(chr(key))
             print_ret = "|".join(str(x) for x in command_return)
             win.addstr(p_y + 2,1,print_ret,cL[1])
-            workspaces = initWorksPrint(1,1)
-        key = win.getch()
+        selection,p_y,p_x = masterInit()
 
     curses.nocbreak()
     win.keypad(False)
