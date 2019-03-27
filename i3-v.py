@@ -5,6 +5,7 @@
 import i3ipc
 import curses
 import math
+import json
 
 #create connection object
 i3 = i3ipc.Connection()
@@ -112,25 +113,29 @@ class Selection:
             win.addstr(*(lines[i+1]))
 
     def printActions(self,p_y,width):
-        lines = [   ("Selected Window:",cL[13]), (self.selected.name,cL[9]),
-                    ("-Layout: ",cL[10]), (self.selected.layout,cL[9]),
-                    ("-Class: ",cL[10]), (self.selected.window_class,cL[9]),
-                    ("-Instance: ",cL[10]), (self.selected.instance,cL[9]),
-                    ("-ID: ",cL[10]), (str(self.selected.id),cL[9]),
-                    ("-Children: ",cL[10]), (str(len(self.selected.children)),cL[9])
+        lines = [   ("Move Selection: ", "<arrow keys>", "wcl"),
+                    ("Shift Window: ", "w a s d", "wcl"),
+                    ("Kill Parent: ", "k", "wcl"),
                 ]
+        win.addstr(p_y,width+1," = Commands =",cL[8] | curses.A_BOLD)
+        for i in lines:
+            p_y += 1
+            if p_y >= windowHeight:
+                break
+            win.addstr(p_y,width+1,i[0],cL[13])
+            win.addstr(i[1],cL[10] )
 
-    def shift(self,key):
+    def move(self,key):
         window = self.selected
-        win.addstr(windowHeight,0,str(key),window.color())
-        win.addstr(" w"+str(self.workspace),cL[2])
-        if key == curses.KEY_UP:
+        #win.addstr(windowHeight,0,key,window.color())
+        #win.addstr(" w"+str(self.workspace),cL[2])
+        if key == "UP":
             if window.parent is not None: 
                 window.deselectW()
                 window.parent.selectW()
                 self.selected = window.parent
             else: return
-        elif key == curses.KEY_DOWN:
+        elif key == "DOWN":
             if len(window.children) > 0:
                 window.deselectW()
                 window.children[0].selectW()
@@ -143,7 +148,7 @@ class Selection:
                 while window.children[oldIndex] != self.selected:
                     oldIndex += 1
                 newIndex = oldIndex
-                if key == curses.KEY_LEFT: newIndex -= 1
+                if key == "LEFT": newIndex -= 1
                 else: newIndex += 1
                 if newIndex < 0: newIndex = len(window.children) - 1
                 elif newIndex >= len(window.children): newIndex = 0
@@ -151,7 +156,7 @@ class Selection:
                 self.selected = window.children[newIndex]
                 self.selected.selectW()
             else:
-                if key == curses.KEY_LEFT: self.workspace -= 1
+                if key == "LEFT": self.workspace -= 1
                 else: self.workspace += 1
                 if self.workspace < 0: self.workspace = len(self.workspaces) - 1
                 elif self.workspace >= len(self.workspaces): self.workspace = 0
@@ -159,7 +164,7 @@ class Selection:
                 self.selected = self.workspaces[self.workspace]
                 self.selected.selectW()
     
-    def move(self,key):
+    def shift(self,key):
         windowid = self.selected.id
         moves = "wasd"
         cmd_string = "[con_id="+str(windowid)+"] move "+MOVE_COMMANDS[key]
@@ -250,16 +255,15 @@ def colorInit():
             curses.init_pair(i+7,i,0)
             cL.append(curses.color_pair(i+7))
         #for j in range(0,1):
-        win.move(windowHeight-1,1)
+        win.move(0,5)
         for i in range(len(cL)):
             #ij = (len(cL)//2) * j + i
             item = cL[i]
-            if i == 8: win.move(windowHeight,17)
             if len(str(i)) == 1: cStr = " C" 
             else: cStr = "C"
             win.addstr(cStr,item | curses.A_BOLD)
-            win.addstr("olor#"+str(i),item)
-    return cL 
+            win.addstr("#"+str(i),item)
+    return cL
 
 #return a string rendering of name with length dim_x characters
 def shortName(name,dim_x):
@@ -312,7 +316,7 @@ def initWorksPrint(p_y,p_x):
     return wList
 
 def masterInit():
-    win.move(0,0)
+    win.move(1,0)
     win.clrtobot()
     workspaces = initWorksPrint(1,1)
     p_y = workspaces.pop()
@@ -327,19 +331,23 @@ def main():
     cL = colorInit()
     selection,p_y,p_x = masterInit()
     while True: #input loop
-        key = win.getch()
-        if chr(key) == 'q':
-            win.addstr(p_y + 2,1,"-12-",cL[9])
+        key = win.getkey()
+        if key == 'q':
             break
-        if (key == curses.KEY_UP or key == curses.KEY_DOWN
-                or key == curses.KEY_LEFT or key == curses.KEY_RIGHT):
-            selection.shift(key)
-            selection.printInfo(p_y + 3,windowWidth//2)
-            continue
-        elif (chr(key) in "wasd"):
-            command_return = selection.move(chr(key))
+        #elif (key == curses.KEY_UP or key == curses.KEY_DOWN
+        #        or key == curses.KEY_LEFT or key == curses.KEY_RIGHT):
+        if len(key) > 1:
+            if key[4:] in "UPDOWNLEFTRIGHT":
+                selection.move(key[4:])
+                selection.printInfo(p_y + 3,windowWidth//2)
+                continue
+        elif key in "wasd":
+            command_return = selection.shift(key)
             print_ret = "|".join(str(x) for x in command_return)
             win.addstr(p_y + 2,1,print_ret,cL[1])
+        else:
+            win.addstr(p_y + 2,1,"unclassified input: "+key,cL[6])
+            continue
         selection,p_y,p_x = masterInit()
 
     curses.nocbreak()
