@@ -332,22 +332,33 @@ def main():
     selection,p_y,p_x = masterInit()
     while True: #input loop
         key = win.getkey()
-        if key == 'q':
-            break
-        #elif (key == curses.KEY_UP or key == curses.KEY_DOWN
-        #        or key == curses.KEY_LEFT or key == curses.KEY_RIGHT):
         if len(key) > 1:
             if key[4:] in "UPDOWNLEFTRIGHT":
                 selection.move(key[4:])
                 selection.printInfo(p_y + 3,windowWidth//2)
-                continue
+                continue#skip screen redraw
+            elif key[4:] == "RESIZE": 
+                curses.endwin()
+                global win,windowHeight,windowWidth
+                win = curses.initscr()
+                win.refresh()
+                win.keypad(True)
+                windowHeight = curses.LINES - 1
+                windowWidth = curses.COLS - 1
+            else:
+                win.addstr(p_y + 2,1,"unclassified input: "+key,cL[6])
+                continue#skip screen redraw
+        elif key == 'q':
+            break
+        elif key == "r":
+            pass#to screen redraw
         elif key in "wasd":
             command_return = selection.shift(key)
             print_ret = "|".join(str(x) for x in command_return)
             win.addstr(p_y + 2,1,print_ret,cL[1])
         else:
             win.addstr(p_y + 2,1,"unclassified input: "+key,cL[6])
-            continue
+            continue#skip screen redraw
         selection,p_y,p_x = masterInit()
 
     curses.nocbreak()
