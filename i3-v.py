@@ -115,7 +115,7 @@ class Selection:
     def printActions(self,p_y,width):
         lines = [   ("Move Selection: ", "<arrow keys>", "wcl"),
                     ("Shift Window: ", "w a s d", "wcl"),
-                    ("Kill Parent: ", "k", "wcl"),
+                    #("Kill Parent: ", "k", "wcl"),
                 ]
         win.addstr(p_y,width+1," = Commands =",cL[8] | curses.A_BOLD)
         for i in lines:
@@ -332,21 +332,24 @@ def main():
     selection,p_y,p_x = masterInit()
     while True: #input loop
         key = win.getkey()
+        #win.addstr(1, 2, "resixe event", cL[7])
         if len(key) > 1:
             if key[4:] in "UPDOWNLEFTRIGHT":
                 selection.move(key[4:])
-                selection.printInfo(p_y + 3,windowWidth//2)
+                selection.printInfo(p_y + 3, windowWidth // 2)
                 continue#skip screen redraw
-            elif key[4:] == "RESIZE": 
-                curses.endwin()
-                global win,windowHeight,windowWidth
-                win = curses.initscr()
-                win.refresh()
-                win.keypad(True)
-                windowHeight = curses.LINES - 1
-                windowWidth = curses.COLS - 1
+            elif key[4:] == "RESIZE":
+                win.addstr(p_y + 2, 1, "resize event", cL[7])
+                #curses.endwin()
+                #global win,windowHeight,windowWidth
+                #win = curses.initscr()
+                #win.refresh()
+                #win.keypad(True)
+                #windowHeight = curses.LINES - 1
+                #windowWidth = curses.COLS - 1
             else:
-                win.addstr(p_y + 2,1,"unclassified input: "+key,cL[6])
+                win.addstr(p_y + 2, 1, "unclassified input: [" + key + "]"
+                        , cL[6])
                 continue#skip screen redraw
         elif key == 'q':
             break
@@ -355,9 +358,10 @@ def main():
         elif key in "wasd":
             command_return = selection.shift(key)
             print_ret = "|".join(str(x) for x in command_return)
-            win.addstr(p_y + 2,1,print_ret,cL[1])
+            win.addstr(p_y + 2, 1, print_ret,cL[1])
         else:
-            win.addstr(p_y + 2,1,"unclassified input: "+key,cL[6])
+            win.addstr(p_y + 2, 1, "unclassified input: [" + key + "]"
+                    , cL[6])
             continue#skip screen redraw
         selection,p_y,p_x = masterInit()
 
@@ -381,7 +385,6 @@ else:
     main()
 
 #wrap up
-focused = tree.find_focused()
 curses.nocbreak()
 win.keypad(False)
 curses.echo()
